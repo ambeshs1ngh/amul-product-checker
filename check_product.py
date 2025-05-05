@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from twilio.rest import Client
 import os
 import smtplib
-from email.mime.text import MIMEText
+import json
+import http.client
 
 def is_product_available():
     url = "https://shop.amul.com/en/product/amul-high-protein-milk-250-ml-or-pack-of-32"
@@ -12,15 +13,11 @@ def is_product_available():
     soup = BeautifulSoup(response.text, "html.parser")
 
     button = soup.find("button", class_="product-add-to-cart")
-
     if button:
         button_text = button.text.strip().lower()
         is_disabled = button.has_attr("disabled") or "disabled" in button.get("class", [])
         if "add to cart" in button_text and not is_disabled:
             return True
-        else:
-            return False
-
     return False
 
 def get_ist_time():
@@ -44,32 +41,42 @@ def make_call(message):
     )
     print("Call placed:", call.sid)
 
-def send_email_notification_mailgun(time_str):
-    smtp_login = os.getenv("MAILGUN_SMTP_LOGIN")
-    smtp_password = os.getenv("MAILGUN_SMTP_PASSWORD")
-    smtp_server = os.getenv("MAILGUN_SMTP_SERVER", "smtp.mailgun.org")
-    to_email = "singhambesh153@gmail.com"
-
-    subject = "Amul Product Unavailable"
-    body = f"The Amul product is still not available as of {time_str} IST."
-
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = smtp_login
-    msg["To"] = to_email
-
-    if not smtp_login or not smtp_password:
-        print("Missing Mailgun credentials. Check GitHub secrets.")
+def send_email_sendgrid(time_str):
+    api_key = os.getenv("SENDGRID_API_KEY")
+    if not api_key:
+        print("Missing SendGrid API key.")
         return
 
+    body = {
+        "personalizations": [{
+            "to": [{"email": "singhambesh153@gmail.com"}],
+            "subject": "Amul Product Unavailable"
+        }],
+        "from": {"email": "noreply@amul-checker.com"},
+        "content": [{
+            "type": "text/plain",
+            "value": f"The Amul product is still not available as of {time_str} IST."
+        }]
+    }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    conn = http.client.HTTPSConnection("api.sendgrid.com")
     try:
-        server = smtplib.SMTP_SSL(smtp_server, 465)
-        server.login(smtp_login, smtp_password)
-        server.sendmail(smtp_login, to_email, msg.as_string())
-        server.quit()
-        print("Email sent via Mailgun.")
+        conn.request("POST", "/v3/mail/send", body=json.dumps(body), headers=headers)
+        response = conn.getresponse()
+        print("SendGrid email response:", response.status, response.reason)
+        if response.status == 202:
+            print("Email sent successfully via SendGrid.")
+        else:
+            print("Failed to send email. Check SendGrid configuration.")
     except Exception as e:
-        print("Failed to send email via Mailgun:", e)
+        print("Exception while sending email:", e)
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     if is_valid_time():
@@ -79,7 +86,7 @@ if __name__ == "__main__":
             message = f"As of {current_time} IST, the Amul high protein milk is available online."
             make_call(message)
         else:
-            send_email_notification_mailgun(current_time)
-            print("Product is not available. Email sent.")
+            send_email_sendgrid(current_time)
+            print("Product is not available. Email sent via SendGrid.")
     else:
         print("Outside allowed calling hours.")
