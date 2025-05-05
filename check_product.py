@@ -9,10 +9,24 @@ def is_product_available():
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
 
+    # Find the Add to Cart button
     button = soup.find("button", class_="product-add-to-cart")
-    if button and "sold out" in button.text.lower():
-        return False
-    return True
+
+    if button:
+        button_text = button.text.strip().lower()
+        is_disabled = button.has_attr("disabled") or "disabled" in button.get("class", [])
+        
+        print("Button text:", button_text)
+        print("Button disabled:", is_disabled)
+
+        if "add to cart" in button_text and not is_disabled:
+            return True
+        else:
+            return False
+
+    # No button found → assume not available
+    print("No 'Add to Cart' button found.")
+    return False
 
 def get_ist_time():
     utc_now = datetime.utcnow()
