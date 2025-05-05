@@ -5,10 +5,14 @@ from twilio.rest import Client
 import os
 
 def is_product_available():
-    url = "https://shop.amul.com/en/product/amul-kool-protein-milkshake-or-arabica-coffee-180-ml-or-pack-of-30"
+    url = "https://shop.amul.com/en/product/amul-high-protein-milk-250-ml-or-pack-of-32"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
-    return "Out of stock" not in soup.text.lower()
+
+    button = soup.find("button", class_="product-add-to-cart")
+    if button and "sold out" in button.text.lower():
+        return False
+    return True
 
 def get_ist_time():
     utc_now = datetime.utcnow()
@@ -17,7 +21,7 @@ def get_ist_time():
 
 def is_valid_time():
     now, _ = get_ist_time()
-    return not (now >= datetime.strptime("22:00", "%H:%M").time() or now <= datetime.strptime("09:00", "%H:%M").time())
+    return datetime.strptime("09:00", "%H:%M").time() <= now <= datetime.strptime("23:00", "%H:%M").time()
 
 def make_call(message):
     account_sid = os.getenv("TWILIO_ACCOUNT_SID")
@@ -34,9 +38,11 @@ def make_call(message):
 if __name__ == "__main__":
     if is_valid_time():
         available = is_product_available()
-        _, current_time = get_ist_time()
-        status = "available" if available else "not available"
-        message = f"As of {current_time} IST, the Amul product is {status}."
-        make_call(message)
+        if available:
+            _, current_time = get_ist_time()
+            message = f"As of {current_time} IST, the Amul high protein milk is available online."
+            make_call(message)
+        else:
+            print("Product is sold out.")
     else:
         print("Outside allowed calling hours.")
