@@ -44,27 +44,32 @@ def make_call(message):
     )
     print("Call placed:", call.sid)
 
-def send_email_notification(time_str):
-    gmail_user = os.getenv("GMAIL_USER")
-    gmail_pass = os.getenv("GMAIL_PASS")
-
+def send_email_notification_mailgun(time_str):
+    smtp_login = os.getenv("MAILGUN_SMTP_LOGIN")
+    smtp_password = os.getenv("MAILGUN_SMTP_PASSWORD")
+    smtp_server = os.getenv("MAILGUN_SMTP_SERVER", "smtp.mailgun.org")
     to_email = "singhambesh153@gmail.com"
+
     subject = "Amul Product Unavailable"
     body = f"The Amul product is still not available as of {time_str} IST."
 
     msg = MIMEText(body)
     msg["Subject"] = subject
-    msg["From"] = gmail_user
+    msg["From"] = smtp_login
     msg["To"] = to_email
 
+    if not smtp_login or not smtp_password:
+        print("Missing Mailgun credentials. Check GitHub secrets.")
+        return
+
     try:
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-        server.login(gmail_user, gmail_pass)
-        server.sendmail(gmail_user, to_email, msg.as_string())
+        server = smtplib.SMTP_SSL(smtp_server, 465)
+        server.login(smtp_login, smtp_password)
+        server.sendmail(smtp_login, to_email, msg.as_string())
         server.quit()
-        print("Email sent.")
+        print("Email sent via Mailgun.")
     except Exception as e:
-        print("Failed to send email:", e)
+        print("Failed to send email via Mailgun:", e)
 
 if __name__ == "__main__":
     if is_valid_time():
@@ -74,7 +79,7 @@ if __name__ == "__main__":
             message = f"As of {current_time} IST, the Amul high protein milk is available online."
             make_call(message)
         else:
-            send_email_notification(current_time)
+            send_email_notification_mailgun(current_time)
             print("Product is not available. Email sent.")
     else:
         print("Outside allowed calling hours.")
