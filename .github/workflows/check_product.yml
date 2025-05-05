@@ -1,9 +1,9 @@
 name: Check Amul Product
 
-on:
-  schedule:
-  - cron: "30 * * * *"
-  workflow_dispatch:
+#on:
+ # schedule:
+  #- cron: "30 * * * *"
+  #workflow_dispatch:
 
 jobs:
   build:
