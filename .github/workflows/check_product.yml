@@ -27,4 +27,6 @@ jobs:
         TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
         TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
         MY_PHONE_NUMBER: ${{ secrets.MY_PHONE_NUMBER }}
+        SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+
       run: python check_product.py
