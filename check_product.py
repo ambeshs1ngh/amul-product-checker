@@ -43,6 +43,7 @@ def make_call(message):
 
 def send_email_sendgrid(time_str):
     api_key = os.getenv("SENDGRID_API_KEY")
+    print("SENDGRID_API_KEY value:", api_key)
     if not api_key:
         print("Missing SendGrid API key.")
         return
