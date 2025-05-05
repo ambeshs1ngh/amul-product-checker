@@ -3,29 +3,24 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from twilio.rest import Client
 import os
+import smtplib
+from email.mime.text import MIMEText
 
 def is_product_available():
     url = "https://shop.amul.com/en/product/amul-high-protein-milk-250-ml-or-pack-of-32"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Find the Add to Cart button
     button = soup.find("button", class_="product-add-to-cart")
 
     if button:
         button_text = button.text.strip().lower()
         is_disabled = button.has_attr("disabled") or "disabled" in button.get("class", [])
-        
-        print("Button text:", button_text)
-        print("Button disabled:", is_disabled)
-
         if "add to cart" in button_text and not is_disabled:
             return True
         else:
             return False
 
-    # No button found → assume not available
-    print("No 'Add to Cart' button found.")
     return False
 
 def get_ist_time():
@@ -49,14 +44,37 @@ def make_call(message):
     )
     print("Call placed:", call.sid)
 
+def send_email_notification(time_str):
+    gmail_user = os.getenv("GMAIL_USER")
+    gmail_pass = os.getenv("GMAIL_PASS")
+
+    to_email = "singhambesh153@gmail.com"
+    subject = "Amul Product Unavailable"
+    body = f"The Amul product is still not available as of {time_str} IST."
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = gmail_user
+    msg["To"] = to_email
+
+    try:
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.login(gmail_user, gmail_pass)
+        server.sendmail(gmail_user, to_email, msg.as_string())
+        server.quit()
+        print("Email sent.")
+    except Exception as e:
+        print("Failed to send email:", e)
+
 if __name__ == "__main__":
     if is_valid_time():
         available = is_product_available()
+        _, current_time = get_ist_time()
         if available:
-            _, current_time = get_ist_time()
             message = f"As of {current_time} IST, the Amul high protein milk is available online."
             make_call(message)
         else:
-            print("Product is sold out.")
+            send_email_notification(current_time)
+            print("Product is not available. Email sent.")
     else:
         print("Outside allowed calling hours.")
