@@ -53,7 +53,7 @@ def send_email_sendgrid(time_str):
             "to": [{"email": "singhambesh153@gmail.com"}],
             "subject": "Amul Product Unavailable"
         }],
-        "from": {"email": "noreply@amul-checker.com"},
+    "from": {"email": "singhambesh153@gmail.com"},
         "content": [{
             "type": "text/plain",
             "value": f"The Amul product is still not available as of {time_str} IST."
