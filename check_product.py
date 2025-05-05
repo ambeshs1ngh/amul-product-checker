@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 from twilio.rest import Client
 import os
 
@@ -10,8 +10,13 @@ def is_product_available():
     soup = BeautifulSoup(response.text, "html.parser")
     return "Out of stock" not in soup.text.lower()
 
+def get_ist_time():
+    utc_now = datetime.utcnow()
+    ist_now = utc_now + timedelta(hours=5, minutes=30)
+    return ist_now.time()
+
 def is_valid_time():
-    now = datetime.now().time()
+    now = get_ist_time()
     return not (now >= datetime.strptime("22:00", "%H:%M").time() or now <= datetime.strptime("09:00", "%H:%M").time())
 
 def make_call():
@@ -31,3 +36,4 @@ if __name__ == "__main__":
         make_call()
     else:
         print("Not available or wrong time.")
+
